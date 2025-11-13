@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <title>Check-in Ospiti</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 16px;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin-bottom: 12px;
+      }
+
+      .top-bar {
+        margin-bottom: 16px;
+      }
+
+      input[type="search"] {
+        padding: 8px;
+        font-size: 16px;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+      }
+
+      th, td {
+        padding: 8px;
+        border-bottom: 1px solid #dddddd;
+        font-size: 14px;
+      }
+
+      tr:nth-child(even) {
+        background: #fafafa;
+      }
+
+      .badge-si {
+        color: green;
+        font-weight: bold;
+      }
+
+      .badge-no {
+        color: red;
+        font-weight: bold;
+      }
+
+      button {
+        padding: 6px 10px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .btn-checkin {
+        border: none;
+        border-radius: 4px;
+        background: #2563eb;
+        color: #ffffff;
+      }
+
+      .btn-checkin[disabled] {
+        background: #cccccc;
+        cursor: default;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Check-in ospiti</h1>
+
+    <div class="top-bar">
+      <input
+        type="search"
+        id="search"
+        placeholder="Cerca nominativo…"
+        oninput="filterList(this.value)"
+      >
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nominativo</th>
+          <th>Colore</th>
+          <th>Invitato</th>
+          <th>Ingresso</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <script>
+      // URL della tua Web App Apps Script (API)
+      const API_URL = "https://script.google.com/macros/s/AKfycbxjdGIVzerloFY58fvjSQkvqn57dSAR5jJ4fluc6jRDHzOcxszbC83RpfuNHG_KffdJ/exec";
+
+      let allGuests = [];
+
+      // Carica la lista dagli Script Google
+      async function loadGuests() {
+        try {
+          const res = await fetch(API_URL + "?action=list");
+          const data = await res.json();
+          allGuests = data;
+          renderTable(data);
+        } catch (err) {
+          console.error(err);
+          alert("Errore nel caricamento della lista.");
+        }
+      }
+
+      // Disegna la tabella
+      function renderTable(list) {
+        const tbody = document.getElementById("tbody");
+        tbody.innerHTML = "";
+
+        list.forEach((riga) => {
+          const tr = document.createElement("tr");
+
+          const nominativo = riga.nominativo || "";
+          const colore = riga.colore || "";
+          const invitato = riga.invitato || "";
+          const ingresso = riga.ingresso || "";
+
+          const giaEntrato = ingresso && String(ingresso).trim() !== "";
+
+          tr.innerHTML = `
+            <td>${nominativo}</td>
+            <td>${colore}</td>
+            <td class="${invitato === "SI" ? "badge-si" : "badge-no"}">${invitato}</td>
+            <td>${ingresso}</td>
+            <td>
+              <button
+                class="btn-checkin"
+                ${giaEntrato ? "disabled" : ""}
+                onclick="segnaIngresso('${escapeForAttr(nominativo)}', '${escapeForAttr(colore)}')"
+              >
+                ${giaEntrato ? "Già entrato" : "Segna ingresso"}
+              </button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Filtro ricerca per nominativo
+      function filterList(query) {
+        const q = query.toLowerCase();
+        const filtrati = allGuests.filter((r) =>
+          (r.nominativo || "").toLowerCase().includes(q)
+        );
+        renderTable(filtrati);
+      }
+
+      // Segna l'ingresso chiamando l'API /exec?action=ingresso
+      async function segnaIngresso(nominativo, colore) {
+        if (!nominativo) return;
+
+        const conferma = confirm("Segnare l'ingresso per: " + nominativo + "?");
+        if (!conferma) return;
+
+        try {
+          const params = new URLSearchParams({
+            action: "ingresso",
+            nominativo: nominativo,
+            colore: colore
+          });
+
+          const res = await fetch(API_URL + "?" + params.toString());
+          const json = await res.json();
+
+          if (json.ok && json.updated) {
+            alert("Ingresso registrato.");
+            // Ricarico la lista per aggiornare la colonna "Ingresso"
+            loadGuests();
+          } else if (json.ok && !json.updated) {
+            alert("Ospite già registrato o non trovato.");
+          } else {
+            alert("Errore: " + (json.error || "sconosciuto"));
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Errore durante il check-in.");
+        }
+      }
+
+      // Utility per evitare problemi con apostrofi nelle stringhe HTML
+      function escapeForAttr(str) {
+        return String(str)
+          .replace(/'/g, "\\'")
+          .replace(/"/g, "&quot;");
+      }
+
+      // Quando la pagina è pronta, carico la lista
+      window.addEventListener("load", loadGuests);
+    </script>
+  </body>
+</html>
