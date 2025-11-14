@@ -25,7 +25,7 @@
     .hidden{display:none}
     .popupConfirm{position:fixed;top:15%;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:30px 40px;border-radius:12px;font-size:26px;font-weight:bold;display:none;z-index:99999;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);animation:pop .3s ease-out}
     @keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
-    .actionsBottom{text-align:center;margin-top:30px}
+    .actionsBottom{text-align:center;margin-top:20px}
     .actionsBottom button{min-width:140px;margin:8px;font-size:16px;color:#fff}
     #showListBtn{background:#2563eb}
     #reportBtn{background:#d97706}
@@ -47,7 +47,14 @@
 
   <div class="card hidden" id="toolsCard">
     <input type="text" id="searchBox" placeholder="Cerca ospite…" autofocus>
-    <div class="counter"><span id="countChecked">0</span> / <span id="countTotal">0</span></div>
+    <div class="counter">
+      <span id="countChecked">0</span> / <span id="countTotal">0</span>
+    </div>
+    <div class="actionsBottom" id="exportCard">
+      <button id="showListBtn">Mostra/Nascondi Ospiti</button>
+      <button id="reportBtn">Scarica Report</button>
+      <button id="resetBtn">Reset 🔒</button>
+    </div>
   </div>
 
   <div class="card hidden" id="tableCard">
@@ -60,12 +67,6 @@
 
   <div class="card hidden" id="confirmCard">
     <button id="confirmBtn" class="ok" style="width:100%;">CONFERMA</button>
-  </div>
-
-  <div class="actionsBottom hidden" id="exportCard">
-    <button id="showListBtn">Mostra/Nascondi Ospiti</button>
-    <button id="reportBtn">Scarica Report</button>
-    <button id="resetBtn">Reset 🔒</button>
   </div>
 
   <div class="popupConfirm" id="popupConfirm">Ospite Accreditato</div>
@@ -123,7 +124,7 @@ async function caricaLista(){
     rawRows = data;
     renderTable();
     toolsCard.classList.remove('hidden');
-    exportCard.classList.remove('hidden');
+    // exportCard sempre visibile dentro toolsCard
   }catch(err){console.error("Errore caricamento:",err);}
 }
 
