@@ -96,6 +96,7 @@ const sheetURL = "https://script.google.com/macros/s/AKfycbwsAe7lZZY6CfWXitxybap
 /* ===== VARIABILI ===== */
 let rawRows=[], selectedRow=null, selectedData=null;
 let listVisible=false;
+let selectedKey = null;  // memorizza la riga selezionata (nominativo+colore)
 
 const searchBox=document.getElementById('searchBox');
 const tbody=document.getElementById('tbody');
@@ -174,27 +175,41 @@ function renderTable(){
       tr.style.pointerEvents='none';
     }
 
+    // chiave univoca per questa riga (serve a ricordare la selezione)
+    const key = (r.nominativo || '') + '|' + (r.colore || '');
+
+    // click sulla riga
     tr.addEventListener('click', () => {
       if (giàConfermato) return;
 
-      // Se la riga è già selezionata → la deseleziono
+      // se è già selezionata → la deseleziono (toggle)
       if (tr.classList.contains('selected')) {
         tr.classList.remove('selected');
         selectedRow = null;
         selectedData = null;
+        selectedKey = null;
         confirmCard.classList.add('hidden');
         return;
       }
 
-      // Tolgo la selezione da tutte le altre righe
+      // altrimenti tolgo la selezione da tutte le altre righe
       [...tbody.children].forEach(row => row.classList.remove('selected'));
 
-      // Seleziono questa
+      // seleziono questa
+      tr.classList.add('selected');
+      selectedRow = tr;
+      selectedData = r;
+      selectedKey = key;
+      confirmCard.classList.remove('hidden');
+    });
+
+    // SE dopo un refresh questa è la riga selezionata → riselezionala
+    if (!giàConfermato && selectedKey === key) {
       tr.classList.add('selected');
       selectedRow = tr;
       selectedData = r;
       confirmCard.classList.remove('hidden');
-    });
+    }
 
     tbody.appendChild(tr);
   });
@@ -210,16 +225,27 @@ searchBox.addEventListener('input', renderTable);
 confirmBtn.addEventListener('click', ()=>{
   if(!selectedData) return;
   confermaOspite(selectedData);
-  if(selectedRow) selectedRow.classList.remove('selected');
-  selectedRow.classList.add('confirmed');
-  selectedRow.style.pointerEvents='none';
+
+  if(selectedRow) {
+    selectedRow.classList.remove('selected');
+    selectedRow.classList.add('confirmed');
+    selectedRow.style.pointerEvents='none';
+  }
+
+  // pulisco la selezione salvata
+  selectedRow = null;
+  selectedData = null;
+  selectedKey = null;
+
   confirmCard.classList.add('hidden');
   listVisible=false; 
   searchBox.value=""; 
-  tableCard.classList.add('hidden');
+
   popupConfirm.style.display="block";
   setTimeout(()=>popupConfirm.style.display="none",2000);
-  setTimeout(caricaLista,1000); // ricarica lista aggiornata
+
+  // ricarico la lista dopo 1 secondo
+  setTimeout(caricaLista,1000);
 });
 
 showListBtn.addEventListener('click', ()=>{
