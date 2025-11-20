@@ -1,8 +1,8 @@
 {
-  "name": "Lista RCS – Accredito Ospiti",
-  "short_name": "ListaRCS",
-  "start_url": "/lista_rcs/",
-  "scope": "/lista_rcs/",
+  "name": "CheckFast – Lista Digitale",
+  "short_name": "Lista Digitale",
+  "start_url": "/listadigitale/",
+  "scope": "/listadigitale/",
   "display": "fullscreen",
   "background_color": "#1f2937",
   "theme_color": "#1f2937",
