@@ -184,7 +184,7 @@ function renderTable(){
     rows=rawRows.filter(r=>{
       return String(r.nominativo??'').toLowerCase().includes(q) ||
              String(r.colore??'').toLowerCase().includes(q) ||
-             String(r.posto??'').toLowerCase().includes(q);
+             String(r.invitato??'').toLowerCase().includes(q);
     });
   }
 
@@ -193,7 +193,7 @@ function renderTable(){
 
   rows.forEach(r=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${r.nominativo || ''}</td><td>${r.colore||''}</td><td>${r.posto||''}</td>`;
+    tr.innerHTML=`<td>${r.nominativo || ''}</td><td>${r.colore||''}</td><td>${r.invitato||''}</td>`;
 
     // consideriamo "confermato" se ingresso NON è vuoto
     const giàConfermato = r.ingresso && String(r.ingresso).trim() !== "";
