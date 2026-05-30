@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <meta name="robots" content="noindex, nofollow">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#2b384b;color:#fff;margin:0;padding:15px}
     h1{text-align:center;font-size:22px;margin-bottom:20px}
@@ -17,10 +18,7 @@
     th{background:#374151;text-align:left}
     tr{cursor:pointer}
     tr:hover{background:#4b5563}
-    tr.confirmed{
-  background:#4CAF50!important;  /* verde del tuo esempio */
-  color:#fff;
-}
+    tr.confirmed{background:#4CAF50!important;color:#fff}
     tr.selected{background:#2563eb!important;color:#fff}
     button{padding:12px 14px;border:none;border-radius:8px;cursor:pointer;margin:6px;font-size:16px}
     button.primary{background:#e52013;color:#fff}
@@ -30,54 +28,29 @@
     .popupConfirm{position:fixed;top:15%;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:30px 40px;border-radius:12px;font-size:26px;font-weight:bold;display:none;z-index:99999;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);animation:pop .3s ease-out}
     @keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
     .actionsBottom{text-align:center;margin-top:20px}
-    .actionsBottom button{
-  min-width:140px;
-  margin:6px;
-  font-size:15px;
-  padding:6px 8px;   /* <-- riduce l’altezza */
-  border-radius:6px;  /* <-- più compatti e moderni */
-  color:#fff;
-}
+    .actionsBottom button{min-width:140px;margin:6px;font-size:15px;padding:6px 8px;border-radius:6px;color:#fff}
     #showListBtn{background:#2563eb}
     #reportBtn{background:#d97706}
     #registerNewBtn{background:#16a34a}
-    #resetBtn{background:#dc2626}
-    .logoBox{
-  width:100%;
-  text-align:center;
-  margin-bottom:15px;
-}
-
-.logoImg{
-  max-width:150px;       /* dimensione logo */
-  height:auto;
-  filter:brightness(1);  /* puoi anche schiarirlo/scurirlo */
-}
-
-    /* Modal password */
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;visibility:hidden;opacity:0;transition:opacity .3s;}
-    .modal.show{visibility:visible;opacity:1;}
-    .modal-content{background:#1f2937;padding:20px;border-radius:12px;text-align:center;width:300px;}
-    .modal h2{margin:0 0 15px;font-size:20px}
-    .modal input{width:100%;font-size:22px;padding:12px;border-radius:8px;border:none;text-align:center;margin-bottom:15px;background:#fff;color:#000;}
-    .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}
-    .keypad button{font-size:22px;padding:15px;border-radius:8px;background:#374151;color:#fff}
-    .modal .actions{display:flex;justify-content:space-between}
-    .modal button.action{width:48%;font-size:18px}
+    .logoBox{width:100%;text-align:center;margin-bottom:15px}
+    .logoImg{max-width:150px;height:auto;filter:brightness(1)}
   </style>
 </head>
+
 <body>
   <div class="logoBox">
-  <img src="https://static.wixstatic.com/media/2080b2_091288fac9ef49fb875e82a42f827415~mv2.png" alt="Logo" class="logoImg">
-</div>
+    <img src="https://static.wixstatic.com/media/2080b2_091288fac9ef49fb875e82a42f827415~mv2.png" alt="Logo" class="logoImg">
+  </div>
 
   <h1>LAVAZZA | TRIENNALE MILANO 5 GIUGNO</h1>
 
   <div class="card hidden" id="toolsCard">
     <input type="text" id="searchBox" placeholder="Cerca ospite…" autofocus>
+
     <div class="counter">
       <span id="countChecked">0</span> / <span id="countTotal">0</span>
     </div>
+
     <div class="actionsBottom" id="exportCard">
       <button id="showListBtn">Mostra/Nascondi</button>
       <button id="reportBtn">Report</button>
@@ -87,8 +60,13 @@
 
   <div class="card hidden" id="tableCard">
     <table id="dataTable">
-      <!-- adattato a Nominativo / Colore / Invitato -->
-      <thead><tr><th>Ospite</th><th>Azienda</th><th>Note</th></tr></thead>
+      <thead>
+        <tr>
+          <th>OSPITI</th>
+          <th>AZIENDA</th>
+          <th>NOTE</th>
+        </tr>
+      </thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
@@ -99,102 +77,133 @@
 
   <div class="popupConfirm" id="popupConfirm">Ospite Accreditato</div>
 
-
 <script>
-/* ===== CONFIG GOOGLE SHEET / WEB APP (account agenziawithyou@gmail.com) ===== */
+/* ===== CONFIG GOOGLE SHEET / WEB APP ===== */
 const sheetURL = "https://script.google.com/macros/s/AKfycbwsAe7lZZY6CfWXitxybapI-mm66ot2gOH_DucpbtpKxEjUINgTAqFK1QUcArZGr5IG-g/exec";
 
 /* ===== VARIABILI ===== */
-let rawRows=[], selectedRow=null, selectedData=null;
-let listVisible=false;
-let selectedKey = null;  // memorizza la riga selezionata (nominativo+colore)
+let rawRows = [];
+let selectedRow = null;
+let selectedData = null;
+let listVisible = false;
+let selectedKey = null;
 
-const searchBox=document.getElementById('searchBox');
-const tbody=document.getElementById('tbody');
-const toolsCard=document.getElementById('toolsCard');
-const tableCard=document.getElementById('tableCard');
-const confirmCard=document.getElementById('confirmCard');
-const confirmBtn=document.getElementById('confirmBtn');
-const countChecked=document.getElementById('countChecked');
-const countTotal=document.getElementById('countTotal');
-const popupConfirm=document.getElementById('popupConfirm');
-const exportCard=document.getElementById('exportCard');
-const showListBtn=document.getElementById('showListBtn');
-const reportBtn=document.getElementById('reportBtn');
-const registerNewBtn=document.getElementById('registerNewBtn');
-const modal=document.getElementById('passwordModal');
-const passwordInput=document.getElementById('passwordInput');
-const modalConfirm=document.getElementById('modalConfirm');
-const modalCancel=document.getElementById('modalCancel');
+const searchBox = document.getElementById('searchBox');
+const tbody = document.getElementById('tbody');
+const toolsCard = document.getElementById('toolsCard');
+const tableCard = document.getElementById('tableCard');
+const confirmCard = document.getElementById('confirmCard');
+const confirmBtn = document.getElementById('confirmBtn');
+const countChecked = document.getElementById('countChecked');
+const countTotal = document.getElementById('countTotal');
+const popupConfirm = document.getElementById('popupConfirm');
+const showListBtn = document.getElementById('showListBtn');
+const reportBtn = document.getElementById('reportBtn');
+const registerNewBtn = document.getElementById('registerNewBtn');
 
-/* ===== FUNZIONI ===== */
+/* ===== CARICA LISTA ===== */
 async function caricaLista(){
   try{
-    // usa l'azione "list" del backend Apps Script
-    let res = await fetch(sheetURL + "?action=list");
+    let res = await fetch(sheetURL + "?action=list&nocache=" + Date.now(), {
+      method: "GET",
+      cache: "no-store"
+    });
+
     let data = await res.json();
-    rawRows = data;
+
+    rawRows = Array.isArray(data) ? data.map(r => ({
+      nominativo: String(r.nominativo || ''),
+      azienda: String(r.azienda || ''),
+      note: String(r.note || ''),
+      ingresso: String(r.ingresso || '')
+    })) : [];
+
     renderTable();
     toolsCard.classList.remove('hidden');
-    // exportCard sempre visibile dentro toolsCard
-  }catch(err){console.error("Errore caricamento:",err);}
+
+  }catch(err){
+    console.error("Errore caricamento:", err);
+    alert("Errore caricamento lista: " + err.message);
+  }
 }
 
+/* ===== CONFERMA OSPITE ESISTENTE ===== */
 async function confermaOspite(dati){
   try{
-    // chiama doPost con action="ingresso", nominativo, colore
-    await fetch(sheetURL,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain"},
-      body:JSON.stringify({
-        action: "ingresso",
-        nominativo: dati.nominativo,
-        colore: dati.colore || ""
-      })
+    const qs = new URLSearchParams({
+      action: "ingresso",
+      nominativo: dati.nominativo,
+      azienda: dati.azienda || ""
     });
-  }catch(err){console.error("Errore POST:",err);}
+
+    let res = await fetch(sheetURL + "?" + qs.toString() + "&nocache=" + Date.now(), {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    let out = await res.json();
+
+    if(!out.ok){
+      throw new Error(out.error || "Conferma non riuscita");
+    }
+
+    return out;
+
+  }catch(err){
+    console.error("Errore conferma:", err);
+    alert("Errore conferma ospite: " + err.message);
+    return null;
+  }
 }
 
+/* ===== RENDER TABELLA ===== */
 function renderTable(){
-  tbody.innerHTML='';
+  tbody.innerHTML = '';
+
   const qRaw = searchBox.value || '';
   const q = qRaw.toLowerCase();
   const showAllBySpace = (qRaw === ' ');
 
-  let rows=[];
+  let rows = [];
+
   if(listVisible || showAllBySpace){
-    rows=rawRows;
-  } else if(q.trim().length>0){
-    rows=rawRows.filter(r=>{
-      return String(r.nominativo??'').toLowerCase().includes(q) ||
-             String(r.colore??'').toLowerCase().includes(q) ||
-             String(r.invitato??'').toLowerCase().includes(q);
+    rows = rawRows;
+  } else if(q.trim().length > 0){
+    rows = rawRows.filter(r => {
+      return String(r.nominativo).toLowerCase().includes(q) ||
+             String(r.azienda).toLowerCase().includes(q) ||
+             String(r.note).toLowerCase().includes(q);
     });
   }
 
-  if(rows.length>0){tableCard.classList.remove('hidden');}
-  else{tableCard.classList.add('hidden');}
+  if(rows.length > 0){
+    tableCard.classList.remove('hidden');
+  } else {
+    tableCard.classList.add('hidden');
+  }
 
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${r.nominativo || ''}</td><td>${r.colore||''}</td><td>${r.invitato||''}</td>`;
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
 
-    // consideriamo "confermato" se ingresso NON è vuoto
-    const giàConfermato = r.ingresso && String(r.ingresso).trim() !== "";
-    if(giàConfermato){
+    tr.innerHTML = `
+      <td>${r.nominativo || ''}</td>
+      <td>${r.azienda || ''}</td>
+      <td>${r.note || ''}</td>
+    `;
+
+    const giaConfermato = r.ingresso && String(r.ingresso).trim() !== "";
+
+    if(giaConfermato){
       tr.classList.add('confirmed');
-      tr.style.pointerEvents='none';
+      tr.style.pointerEvents = 'none';
     }
 
-    // chiave univoca per questa riga (serve a ricordare la selezione)
-    const key = (r.nominativo || '') + '|' + (r.colore || '');
+    const key = (r.nominativo || '') + '|' + (r.azienda || '');
 
-    // click sulla riga
     tr.addEventListener('click', () => {
-      if (giàConfermato) return;
+      if(giaConfermato) return;
 
-      // se è già selezionata → la deseleziono (toggle)
-      if (tr.classList.contains('selected')) {
+      if(tr.classList.contains('selected')){
         tr.classList.remove('selected');
         selectedRow = null;
         selectedData = null;
@@ -203,10 +212,8 @@ function renderTable(){
         return;
       }
 
-      // altrimenti tolgo la selezione da tutte le altre righe
       [...tbody.children].forEach(row => row.classList.remove('selected'));
 
-      // seleziono questa
       tr.classList.add('selected');
       selectedRow = tr;
       selectedData = r;
@@ -214,8 +221,7 @@ function renderTable(){
       confirmCard.classList.remove('hidden');
     });
 
-    // SE dopo un refresh questa è la riga selezionata → riselezionala
-    if (!giàConfermato && selectedKey === key) {
+    if(!giaConfermato && selectedKey === key){
       tr.classList.add('selected');
       selectedRow = tr;
       selectedData = r;
@@ -225,55 +231,66 @@ function renderTable(){
     tbody.appendChild(tr);
   });
 
-  // conteggio ingressi confermati
-  let c=rawRows.filter(r => r.ingresso && String(r.ingresso).trim() !== "").length;
-  countChecked.textContent=c; 
-  countTotal.textContent=rawRows.length;
+  let c = rawRows.filter(r => r.ingresso && String(r.ingresso).trim() !== "").length;
+
+  countChecked.textContent = c;
+  countTotal.textContent = rawRows.length;
 }
 
+/* ===== RICERCA ===== */
 searchBox.addEventListener('input', renderTable);
 
-confirmBtn.addEventListener('click', ()=>{
+/* ===== CLICK CONFERMA ===== */
+confirmBtn.addEventListener('click', async () => {
   if(!selectedData) return;
-  confermaOspite(selectedData);
 
-  if(selectedRow) {
+  const out = await confermaOspite(selectedData);
+
+  if(!out || !out.ok) return;
+
+  if(selectedRow){
     selectedRow.classList.remove('selected');
     selectedRow.classList.add('confirmed');
-    selectedRow.style.pointerEvents='none';
+    selectedRow.style.pointerEvents = 'none';
   }
 
-  // pulisco la selezione salvata
   selectedRow = null;
   selectedData = null;
   selectedKey = null;
 
   confirmCard.classList.add('hidden');
-  listVisible=false; 
-  searchBox.value=""; 
+  listVisible = false;
+  searchBox.value = "";
 
-  popupConfirm.style.display="block";
-  setTimeout(()=>popupConfirm.style.display="none",2000);
+  popupConfirm.textContent = "Ospite Accreditato";
+  popupConfirm.style.display = "block";
 
-  // ricarico la lista dopo 1 secondo
-  setTimeout(caricaLista,1000);
+  await caricaLista();
+
+  setTimeout(() => popupConfirm.style.display = "none", 2000);
 });
 
-showListBtn.addEventListener('click', ()=>{
-  listVisible=!listVisible;
-  if(listVisible) searchBox.value="";
+/* ===== MOSTRA / NASCONDI LISTA ===== */
+showListBtn.addEventListener('click', () => {
+  listVisible = !listVisible;
+
+  if(listVisible){
+    searchBox.value = "";
+  }
+
   renderTable();
 });
 
-reportBtn.addEventListener('click', ()=>{
-  const ws=XLSX.utils.json_to_sheet(rawRows);
-  const wb=XLSX.utils.book_new();
+/* ===== REPORT EXCEL ===== */
+reportBtn.addEventListener('click', () => {
+  const ws = XLSX.utils.json_to_sheet(rawRows);
+  const wb = XLSX.utils.book_new();
+
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
-  XLSX.writeFile(wb,'report_completo.xlsx');
+  XLSX.writeFile(wb, 'report_completo.xlsx');
 });
 
-
-/* ===== NUOVO OSPITE DA CAMPO DI RICERCA ===== */
+/* ===== AGGIUNGI NUOVO OSPITE ===== */
 async function aggiungiNuovoOspiteDaSearch(){
   const nome = (searchBox.value || "").trim();
 
@@ -284,29 +301,26 @@ async function aggiungiNuovoOspiteDaSearch(){
   }
 
   try{
+    const qs = new URLSearchParams({
+      action: "aggiungi",
+      nominativo: nome,
+      azienda: "",
+      note: ""
+    });
+
+    let res = await fetch(sheetURL + "?" + qs.toString() + "&nocache=" + Date.now(), {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    let out = await res.json();
+
+    if(!out.ok){
+      throw new Error(out.error || "Registrazione non riuscita");
+    }
+
     popupConfirm.textContent = "Nuovo ospite registrato";
     popupConfirm.style.display = "block";
-
-    await fetch(sheetURL,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain"},
-      body:JSON.stringify({
-        action: "aggiungi",
-        azione: "aggiungi",
-
-        // Campi usati da questa prima versione
-        nominativo: nome,
-        colore: "",
-        invitato: "",
-        ingresso: "SI",
-
-        // Campi mantenuti anche per compatibilità con la seconda versione
-        nome: nome,
-        azienda: "",
-        posto: "",
-        confermato: "SI"
-      })
-    });
 
     searchBox.value = "";
     listVisible = false;
@@ -315,19 +329,21 @@ async function aggiungiNuovoOspiteDaSearch(){
     selectedKey = null;
     confirmCard.classList.add('hidden');
 
-    setTimeout(()=>popupConfirm.style.display="none",2000);
-    setTimeout(caricaLista,1000);
+    await caricaLista();
+
+    setTimeout(() => popupConfirm.style.display = "none", 2000);
 
   }catch(err){
     popupConfirm.style.display = "none";
     console.error("Errore registrazione nuovo ospite:", err);
-    alert("Si è verificato un errore nella registrazione. Riprova.");
+    alert("Errore registrazione nuovo ospite: " + err.message);
   }
 }
 
-/* ===== CLICK SU "REGISTRA NUOVO OSPITE" ===== */
-registerNewBtn.addEventListener('click', async ()=>{
+/* ===== CLICK REGISTRA NUOVO OSPITE ===== */
+registerNewBtn.addEventListener('click', async () => {
   registerNewBtn.disabled = true;
+
   const oldText = registerNewBtn.textContent;
   registerNewBtn.textContent = "Registrazione in corso...";
 
@@ -339,10 +355,10 @@ registerNewBtn.addEventListener('click', async ()=>{
   }
 });
 
-
 /* ===== AVVIO ===== */
 caricaLista();
-setInterval(caricaLista,5000); // aggiorna ogni 5s
+setInterval(caricaLista, 5000);
 </script>
+
 </body>
 </html>
