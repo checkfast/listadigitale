@@ -24,15 +24,14 @@
     button.ok{background:#16a34a;color:#fff}
     .counter{margin-top:10px;font-size:20px;text-align:center}
     .hidden{display:none}
-    .popupConfirm{position:fixed;top:15%;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:30px 40px;border-radius:12px;font-size:26px;font-weight:bold;display:none;z-index:99999;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);animation:pop .3s ease-out}
-    @keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+    .popupConfirm{position:fixed;top:15%;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:30px 40px;border-radius:12px;font-size:26px;font-weight:bold;display:none;z-index:99999;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
     .actionsBottom{text-align:center;margin-top:20px}
     .actionsBottom button{min-width:140px;margin:6px;font-size:15px;padding:6px 8px;border-radius:6px;color:#fff}
     #showListBtn{background:#2563eb}
     #reportBtn{background:#d97706}
     #registerNewBtn{background:#16a34a}
     .logoBox{width:100%;text-align:center;margin-bottom:15px}
-    .logoImg{max-width:150px;height:auto;filter:brightness(1)}
+    .logoImg{max-width:150px;height:auto}
   </style>
 </head>
 
@@ -77,7 +76,7 @@
   <div class="popupConfirm" id="popupConfirm">Ospite Accreditato</div>
 
 <script>
-const sheetURL = "https://script.google.com/macros/s/AKfycbwsAe7lZZY6CfWXitxybapI-mm66ot2gOH_DucpbtpKxEjUINgTAqFK1QUcArZGr5IG-g/exec";
+const sheetURL = "INCOLLA_QUI_IL_TUO_LINK_WEB_APP";
 
 let rawRows = [];
 let selectedRow = null;
@@ -100,21 +99,10 @@ const registerNewBtn = document.getElementById('registerNewBtn');
 
 async function caricaLista(){
   try{
-    let res = await fetch(sheetURL + "?action=list&nocache=" + Date.now(), {
-      method: "GET",
-      cache: "no-store"
-    });
+    const res = await fetch(sheetURL + "?nocache=" + Date.now());
+    const data = await res.json();
 
-    let data = await res.json();
-
-    console.log("DATI RICEVUTI DALLO SCRIPT:", data);
-
-    rawRows = Array.isArray(data) ? data.map(r => ({
-      nominativo: String(r.nominativo || r.Nominativo || ''),
-      azienda: String(r.azienda || r.Azienda || ''),
-      note: String(r.note || r.Note || ''),
-      ingresso: String(r.ingresso || r.Ingresso || '')
-    })) : [];
+    rawRows = Array.isArray(data) ? data : [];
 
     renderTable();
     toolsCard.classList.remove('hidden');
@@ -125,50 +113,35 @@ async function caricaLista(){
   }
 }
 
-async function confermaOspite(dati){
-  try{
-    const qs = new URLSearchParams({
-      action: "ingresso",
-      nominativo: dati.nominativo,
-      azienda: dati.azienda || ""
-    });
+function aggiornaContatori(){
+  const total = rawRows.length;
 
-    let res = await fetch(sheetURL + "?" + qs.toString() + "&nocache=" + Date.now(), {
-      method: "GET",
-      cache: "no-store"
-    });
+  const checked = rawRows.filter(r => {
+    const v = String(r.ingresso || "").trim();
+    return v !== "";
+  }).length;
 
-    let out = await res.json();
-
-    if(!out.ok){
-      throw new Error(out.error || "Conferma non riuscita");
-    }
-
-    return out;
-
-  }catch(err){
-    console.error("Errore conferma:", err);
-    alert("Errore conferma ospite: " + err.message);
-    return null;
-  }
+  countTotal.textContent = total;
+  countChecked.textContent = checked;
 }
 
 function renderTable(){
-  tbody.innerHTML = '';
+  tbody.innerHTML = "";
 
-  const qRaw = searchBox.value || '';
-  const q = qRaw.toLowerCase();
-  const showAllBySpace = (qRaw === ' ');
+  let q = searchBox.value.trim().toLowerCase();
+  let rows = rawRows;
 
-  let rows = [];
+  if(!listVisible && q === ""){
+    tableCard.classList.add('hidden');
+    aggiornaContatori();
+    return;
+  }
 
-  if(listVisible || showAllBySpace){
-    rows = rawRows;
-  } else if(q.trim().length > 0){
+  if(q !== ""){
     rows = rawRows.filter(r => {
-      return String(r.nominativo).toLowerCase().includes(q) ||
-             String(r.azienda).toLowerCase().includes(q) ||
-             String(r.note).toLowerCase().includes(q);
+      return String(r.nominativo || '').toLowerCase().includes(q) ||
+             String(r.azienda || '').toLowerCase().includes(q) ||
+             String(r.note || '').toLowerCase().includes(q);
     });
   }
 
@@ -187,14 +160,14 @@ function renderTable(){
       <td>${r.note || ''}</td>
     `;
 
-    const giaConfermato = r.ingresso && String(r.ingresso).trim() !== "";
+    const giaConfermato = !!(r.ingresso && String(r.ingresso).trim() !== "");
 
     if(giaConfermato){
       tr.classList.add('confirmed');
       tr.style.pointerEvents = 'none';
     }
 
-    const key = (r.nominativo || '') + '|' + (r.azienda || '');
+    const key = (r.nominativo || '') + '|' + (r.azienda || '') + '|' + (r.note || '');
 
     tr.addEventListener('click', () => {
       if(giaConfermato) return;
@@ -227,91 +200,31 @@ function renderTable(){
     tbody.appendChild(tr);
   });
 
-  let c = rawRows.filter(r => r.ingresso && String(r.ingresso).trim() !== "").length;
-
-  countChecked.textContent = c;
-  countTotal.textContent = rawRows.length;
+  aggiornaContatori();
 }
 
-searchBox.addEventListener('input', renderTable);
+async function inviaDati(dati){
+  const res = await fetch(sheetURL, {
+    method: 'POST',
+    body: JSON.stringify(dati)
+  });
 
-confirmBtn.addEventListener('click', async () => {
-  if(!selectedData) return;
+  const testo = await res.text();
+  return testo;
+}
 
-  const out = await confermaOspite(selectedData);
-
-  if(!out || !out.ok) return;
-
-  if(selectedRow){
-    selectedRow.classList.remove('selected');
-    selectedRow.classList.add('confirmed');
-    selectedRow.style.pointerEvents = 'none';
-  }
-
-  selectedRow = null;
-  selectedData = null;
-  selectedKey = null;
-
-  confirmCard.classList.add('hidden');
-  listVisible = false;
-  searchBox.value = "";
-
-  popupConfirm.textContent = "Ospite Accreditato";
-  popupConfirm.style.display = "block";
-
-  await caricaLista();
-
-  setTimeout(() => popupConfirm.style.display = "none", 2000);
-});
-
-showListBtn.addEventListener('click', () => {
-  listVisible = !listVisible;
-
-  if(listVisible){
-    searchBox.value = "";
-  }
-
-  renderTable();
-});
-
-reportBtn.addEventListener('click', () => {
-  const ws = XLSX.utils.json_to_sheet(rawRows);
-  const wb = XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Report');
-  XLSX.writeFile(wb, 'report_completo.xlsx');
-});
-
-async function aggiungiNuovoOspiteDaSearch(){
-  const nome = (searchBox.value || "").trim();
-
-  if(!nome){
-    alert("Scrivi prima nome e cognome dell'ospite nel campo di ricerca");
-    searchBox.focus();
-    return;
-  }
-
+async function confermaOspite(dati){
   try{
-    const qs = new URLSearchParams({
-      action: "aggiungi",
-      nominativo: nome,
-      azienda: "",
-      note: ""
-    });
-
-    let res = await fetch(sheetURL + "?" + qs.toString() + "&nocache=" + Date.now(), {
-      method: "GET",
-      cache: "no-store"
-    });
-
-    let out = await res.json();
-
-    if(!out.ok){
-      throw new Error(out.error || "Registrazione non riuscita");
-    }
-
-    popupConfirm.textContent = "Nuovo ospite registrato";
+    popupConfirm.textContent = "Ospite accreditato";
     popupConfirm.style.display = "block";
+
+    const risposta = await inviaDati(dati);
+
+    if(risposta !== "OK_CONFIRM" && risposta !== "OK_ADD"){
+      popupConfirm.style.display = "none";
+      alert("Errore conferma: " + risposta);
+      return;
+    }
 
     searchBox.value = "";
     listVisible = false;
@@ -322,13 +235,53 @@ async function aggiungiNuovoOspiteDaSearch(){
 
     await caricaLista();
 
-    setTimeout(() => popupConfirm.style.display = "none", 2000);
+    setTimeout(() => {
+      popupConfirm.style.display = "none";
+    }, 1000);
 
   }catch(err){
     popupConfirm.style.display = "none";
-    console.error("Errore registrazione nuovo ospite:", err);
-    alert("Errore registrazione nuovo ospite: " + err.message);
+    alert("Errore di rete o connessione: " + err.message);
   }
+}
+
+confirmBtn.addEventListener('click', async () => {
+  if(!selectedData) return;
+  await confermaOspite(selectedData);
+});
+
+searchBox.addEventListener('input', renderTable);
+
+showListBtn.addEventListener('click', () => {
+  listVisible = !listVisible;
+  if(listVisible) searchBox.value = "";
+  renderTable();
+});
+
+reportBtn.addEventListener('click', () => {
+  const ws = XLSX.utils.json_to_sheet(rawRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Report');
+  XLSX.writeFile(wb, 'report_completo.xlsx');
+});
+
+async function aggiungiNuovoOspiteDaSearch(){
+  const nominativo = (searchBox.value || "").trim();
+
+  if(!nominativo){
+    alert("Scrivi prima nome e cognome dell'ospite nel campo di ricerca");
+    searchBox.focus();
+    return;
+  }
+
+  const datiNuovo = {
+    azione: "aggiungi",
+    nominativo: nominativo,
+    azienda: "",
+    note: ""
+  };
+
+  await confermaOspite(datiNuovo);
 }
 
 registerNewBtn.addEventListener('click', async () => {
@@ -339,6 +292,9 @@ registerNewBtn.addEventListener('click', async () => {
 
   try{
     await aggiungiNuovoOspiteDaSearch();
+  }catch(err){
+    console.error("Errore registrazione nuovo ospite:", err);
+    alert("Si è verificato un errore nella registrazione.");
   }finally{
     registerNewBtn.disabled = false;
     registerNewBtn.textContent = oldText;
@@ -346,7 +302,12 @@ registerNewBtn.addEventListener('click', async () => {
 });
 
 caricaLista();
-setInterval(caricaLista, 5000);
+
+setInterval(() => {
+  if(!selectedData){
+    caricaLista();
+  }
+}, 30000);
 </script>
 
 </body>
