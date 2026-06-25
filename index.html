@@ -18,6 +18,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <meta name="format-detection" content="telephone=no">
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#2b384b;color:#fff;margin:0;padding:15px}
     h1{text-align:center;font-size:22px;margin-bottom:20px}
@@ -84,7 +86,7 @@
   <button id="confirmBtn" class="ok" style="width:100%;">CONFERMA</button>
 </div>
 
-<div class="popupConfirm" id="popupConfirm">Ospite Accreditato</div>
+<div class="popupConfirm" id="popupConfirm">Ospite accreditato</div>
 
 <script>
 const sheetURL = "https://script.google.com/macros/s/AKfycbwsAe7lZZY6CfWXitxybapI-mm66ot2gOH_DucpbtpKxEjUINgTAqFK1QUcArZGr5IG-g/exec";
@@ -197,6 +199,17 @@ function renderTable() {
 }
 
 async function confermaOspite(dati) {
+  popupConfirm.textContent = "Accredito in corso...";
+  popupConfirm.style.display = "block";
+
+  if (selectedRow) {
+    selectedRow.classList.add("confirmed");
+    selectedRow.classList.remove("selected");
+    selectedRow.style.pointerEvents = "none";
+  }
+
+  confirmCard.classList.add("hidden");
+
   const qs = new URLSearchParams({
     action: "ingresso",
     nominativo: dati.nominativo || "",
@@ -204,29 +217,36 @@ async function confermaOspite(dati) {
     note: dati.note || ""
   });
 
-  const res = await fetch(sheetURL + "?" + qs.toString() + "&nocache=" + Date.now());
-  const out = await res.json();
+  try {
+    const res = await fetch(sheetURL + "?" + qs.toString() + "&nocache=" + Date.now());
+    const out = await res.json();
 
-  if (!out.ok) {
-    alert("Errore conferma: " + out.error);
-    return;
-  }
+    if (!out.ok) {
+      popupConfirm.style.display = "none";
+      alert("Errore conferma: " + out.error);
+      await caricaLista();
+      return;
+    }
 
-  popupConfirm.textContent = "Ospite accreditato";
-  popupConfirm.style.display = "block";
+    popupConfirm.textContent = "Ospite accreditato";
 
-  selectedRow = null;
-  selectedData = null;
-  selectedKey = null;
-  confirmCard.classList.add("hidden");
-  searchBox.value = "";
-  listVisible = false;
+    selectedRow = null;
+    selectedData = null;
+    selectedKey = null;
+    searchBox.value = "";
+    listVisible = false;
 
-  await caricaLista();
+    await caricaLista();
 
-  setTimeout(() => {
+    setTimeout(() => {
+      popupConfirm.style.display = "none";
+    }, 1000);
+
+  } catch (err) {
     popupConfirm.style.display = "none";
-  }, 1000);
+    alert("Errore connessione: " + err.message);
+    await caricaLista();
+  }
 }
 
 confirmBtn.addEventListener("click", async () => {
